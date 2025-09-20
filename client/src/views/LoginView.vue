@@ -1,5 +1,8 @@
 <script setup>
 import { reactive } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const form = reactive({
   email: "",
@@ -7,7 +10,7 @@ const form = reactive({
 })
 
 const submitLoginForm = () => {
-  
+  router.push('/dashboard')
 }
 </script>
 
