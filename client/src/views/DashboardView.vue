@@ -4,6 +4,8 @@ import ElectionList from '@/components/ElectionList.vue';
 </script>
 
 <template>
-    <Navbar />
-    <ElectionList />
+    <div class="bg-neutral-100 min-h-screen">
+        <Navbar />
+        <ElectionList />
+    </div>
 </template>

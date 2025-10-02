@@ -15,30 +15,29 @@ const submitLoginForm = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 flex items-center justify-center">
-    <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-      <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">Login to BEEVS</h2>
-      <form>
-        <div class="mb-4">
-          <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email Address</label>
+  <div class="min-h-screen bg-neutral-100 flex items-center justify-center">
+    <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+      <h2 class="text-3xl font-bold text-center text-primary mb-8">Login to BEEVS</h2>
+      <form @submit.prevent="submitLoginForm">
+        <div class="mb-6">
+          <label for="email" class="block text-neutral-700 text-sm font-bold mb-2">Email Address</label>
           <input 
             v-model="form.email" type="email" id="email" name="email"
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            class="w-full px-4 py-3 bg-neutral-200 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Enter your email">
         </div>
         <div class="mb-6">
-          <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+          <label for="password" class="block text-neutral-700 text-sm font-bold mb-2">Password</label>
           <input 
             v-model="form.password"
             type="password" id="password" name="password"
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+            class="w-full px-4 py-3 bg-neutral-200 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Enter your password">
         </div>
         <div class="flex items-center justify-between">
           <button
-            @click="submitLoginForm()"
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline cursor-pointer"
-            type="button">
+            type="submit"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline cursor-pointer transition-colors duration-300">
             Login
           </button>
         </div>

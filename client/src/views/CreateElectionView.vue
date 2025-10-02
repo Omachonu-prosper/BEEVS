@@ -19,40 +19,43 @@ const submitCreateElectionForm = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 flex items-center justify-center">
-    <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-      <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">Create New Election</h2>
-      <form>
-        <div class="mb-4">
-          <label for="title" class="block text-gray-700 text-sm font-bold mb-2">Election Title</label>
+  <div class="min-h-screen bg-neutral-100 flex items-center justify-center">
+    <div class="max-w-lg w-full bg-white rounded-lg shadow-lg p-8">
+      <h2 class="text-3xl font-bold text-center text-primary mb-8">Create New Election</h2>
+      <form @submit.prevent="submitCreateElectionForm">
+        <div class="mb-6">
+          <label for="title" class="block text-neutral-700 text-sm font-bold mb-2">Election Title</label>
           <input 
             v-model="form.title" type="text" id="title" name="title"
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            class="w-full px-4 py-3 bg-neutral-200 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Enter election title">
         </div>
-        <div class="mb-4">
-          <label for="scheduled_for" class="block text-gray-700 text-sm font-bold mb-2">Scheduled Date</label>
-          <input 
-            v-model="form.scheduled_for" type="date" id="scheduled_for" name="scheduled_for"
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <label for="scheduled_for" class="block text-neutral-700 text-sm font-bold mb-2">Scheduled Date</label>
+            <input 
+              v-model="form.scheduled_for" type="date" id="scheduled_for" name="scheduled_for"
+              class="w-full px-4 py-3 bg-neutral-200 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="start_time" class="block text-neutral-700 text-sm font-bold mb-2">Start Time</label>
+              <input 
+                v-model="form.start_time" type="time" id="start_time" name="start_time"
+                class="w-full px-4 py-3 bg-neutral-200 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+            </div>
+            <div>
+              <label for="end_time" class="block text-neutral-700 text-sm font-bold mb-2">End Time</label>
+              <input 
+                v-model="form.end_time" type="time" id="end_time" name="end_time"
+                class="w-full px-4 py-3 bg-neutral-200 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+            </div>
+          </div>
         </div>
-        <div class="mb-4">
-          <label for="start_time" class="block text-gray-700 text-sm font-bold mb-2">Start Time</label>
-          <input 
-            v-model="form.start_time" type="time" id="start_time" name="start_time"
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-        </div>
-        <div class="mb-6">
-          <label for="end_time" class="block text-gray-700 text-sm font-bold mb-2">End Time</label>
-          <input 
-            v-model="form.end_time" type="time" id="end_time" name="end_time"
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline">
-        </div>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-center">
           <button
-            @click="submitCreateElectionForm()"
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline cursor-pointer"
-            type="button">
+            type="submit"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline cursor-pointer transition-colors duration-300">
             Create Election
           </button>
         </div>
