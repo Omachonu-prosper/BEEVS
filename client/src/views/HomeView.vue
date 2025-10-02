@@ -10,7 +10,7 @@ import { RouterLink } from 'vue-router';
         </RouterLink> or 
         <RouterLink to="/vote/test-vote" class="text-blue-500 hover:text-blue-700">
         View the vote page
-        </RouterLink> or  <RouterLink to="/login" class="text-blue-500 hover:text-blue-700">
+        </RouterLink> or  <RouterLink to="/results/test-vote" class="text-blue-500 hover:text-blue-700">
         View election results
         </RouterLink>
     </h1>
