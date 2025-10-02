@@ -1,20 +1,30 @@
+<script setup>
+const props = defineProps({
+  currentSection: String
+});
+
+const emit = defineEmits(['section-change']);
+
+const actions = ['Details', 'Admins', 'Posts', 'Candidates', 'Voters', 'Institutional records'];
+
+const changeSection = (section) => {
+  emit('section-change', section);
+};
+</script>
+
 <template>
   <div class="w-64 p-4 h-screen pt-10">
     <ul>
-      <li class="mb-2">
-        <button class="cursor-pointer w-full text-left bg-gray-300 hover:bg-gray-400 p-2 rounded">Admins</button>
-      </li>
-      <li class="mb-2">
-        <button class="cursor-pointer w-full text-left bg-gray-300 hover:bg-gray-400 p-2 rounded">Posts</button>
-      </li>
-      <li class="mb-2">
-        <button class="cursor-pointer w-full text-left bg-gray-300 hover:bg-gray-400 p-2 rounded">Candidates</button>
-      </li>
-      <li class="mb-2">
-        <button class="cursor-pointer w-full text-left bg-gray-300 hover:bg-gray-400 p-2 rounded">Voters</button>
-      </li>
-      <li class="mb-2">
-        <button class="cursor-pointer w-full text-left bg-gray-300 hover:bg-gray-400 p-2 rounded">Institutional records</button>
+      <li v-for="action in actions" :key="action" class="mb-2">
+        <button 
+          @click="changeSection(action)"
+          :class="['cursor-pointer w-full text-left p-2 rounded', {
+            'bg-blue-600 text-white': currentSection === action,
+            'bg-gray-300 hover:bg-gray-400': currentSection !== action
+          }]"
+        >
+          {{ action }}
+        </button>
       </li>
     </ul>
   </div>
