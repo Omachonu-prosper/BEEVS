@@ -4,6 +4,7 @@ import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import CreateElectionView from '@/views/CreateElectionView.vue'
+import ElectionView from '@/views/ElectionView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,6 +24,10 @@ const router = createRouter({
     {
       path: '/create-election',
       component: CreateElectionView
+    },
+    {
+      path: '/election/:id',
+      component: ElectionView
     }
   ],
 })
