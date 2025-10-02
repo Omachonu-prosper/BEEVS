@@ -55,7 +55,7 @@ const deleteCandidate = (postId, candidateId) => {
 <template>
   <div>
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold text-blue-600">Candidates by Post</h2>
+      <h2 class="text-2xl font-bold">Candidates by Post</h2>
       <div>
         <button @click="showAddCandidatePopup = true" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg cursor-pointer transition-colors duration-300">Add Candidate</button>
       </div>
