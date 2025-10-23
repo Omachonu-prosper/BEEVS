@@ -13,26 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from beevs import create_app, db
 from beevs.models import Admin, AdminRole
-
-
-def validate_email(email):
-    """Basic email validation"""
-    import re
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
-
-
-def validate_password(password):
-    """Basic password validation"""
-    if len(password) < 8:
-        return False, "Password must be at least 8 characters long"
-    # if not any(c.isupper() for c in password):
-    #     return False, "Password must contain at least one uppercase letter"
-    # if not any(c.islower() for c in password):
-    #     return False, "Password must contain at least one lowercase letter"
-    # if not any(c.isdigit() for c in password):
-    #     return False, "Password must contain at least one number"
-    return True, "Password is valid"
+from beevs.utils import validate_email, validate_password_strength
 
 
 def create_super_admin():
@@ -61,7 +42,7 @@ def create_super_admin():
             print("Error: Password cannot be empty")
             continue
             
-        is_valid, message = validate_password(password)
+        is_valid, message = validate_password_strength(password)
         if not is_valid:
             print(f"Error: {message}")
             continue
