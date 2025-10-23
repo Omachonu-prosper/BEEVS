@@ -1,11 +1,14 @@
 from flask import Flask
 from flask_cors import CORS
+from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 
 from beevs.response import APIResponse
 from beevs.config import Config
-from beevs.models import db
 
+db = SQLAlchemy()
+bcrypt = Bcrypt()
 
 def create_app():
     app = Flask(__name__)

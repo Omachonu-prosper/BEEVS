@@ -1,8 +1,6 @@
-from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
 from enum import Enum
-
-db = SQLAlchemy()
+from datetime import datetime
+from beevs import db, bcrypt
 
 
 class AdminRole(Enum):
@@ -20,14 +18,24 @@ class Admin(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
     role = db.Column(db.Enum(AdminRole), nullable=False, default=AdminRole.ADMIN)
     
-    def __init__(self, name, email, password_hash, role=AdminRole.ADMIN):
+    def __init__(self, name, email, role=AdminRole.ADMIN):
         self.name = name
         self.email = email
-        self.password_hash = password_hash
         self.role = role
     
     def __repr__(self):
         return f'<Admin {self.name} ({self.email})>'
+    
+    @property
+    def password(self):
+        raise AttributeError("Password is not a readable attribute!")
+    
+    @password.setter
+    def password(self, plain_password):
+        self.password_hash = bcrypt.generate_password_hash(plain_password).decode('utf-8')
+
+    def check_password(self, plain_password):
+        return bcrypt.check_password_hash(self.password_hash, plain_password)
     
     def to_dict(self):
         """Convert admin object to dictionary for JSON serialization"""
