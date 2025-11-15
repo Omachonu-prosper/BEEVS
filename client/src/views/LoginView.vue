@@ -1,6 +1,7 @@
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { login as apiLogin, saveTokens } from '@/utils/auth'
 
 const router = useRouter()
 
@@ -9,8 +10,23 @@ const form = reactive({
   password: ""
 })
 
-const submitLoginForm = () => {
-  router.push('/dashboard')
+const loading = ref(false)
+const error = ref('')
+
+const submitLoginForm = async () => {
+  error.value = ''
+  loading.value = true
+  try {
+    const data = await apiLogin({ email: form.email, password: form.password })
+    // data should include { admin, tokens }
+    saveTokens(data.tokens, data.admin)
+    router.push('/dashboard')
+  } catch (err) {
+    console.error(err)
+    error.value = err?.message || 'Login failed. Please check your credentials.'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
