@@ -8,3 +8,4 @@ env/
 venv/
 ENV/
 .env
+beevs/static/images/

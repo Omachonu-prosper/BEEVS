@@ -33,9 +33,9 @@ const handleSectionChange = (section) => {
       <div class="flex-1 p-8">
         <Breadcrumb :crumbs="crumbs" />
         <div class="bg-white mt-5 p-8 rounded-2xl shadow-lg">
-          <DetailsTab v-if="currentSection === 'Details'" />
-          <PostsTab v-else-if="currentSection === 'Posts'" />
-          <CandidatesTab v-else-if="currentSection === 'Candidates'" />
+          <DetailsTab v-if="currentSection === 'Details'" :electionId="electionId" />
+          <PostsTab v-else-if="currentSection === 'Posts'" :electionId="electionId" />
+          <CandidatesTab v-else-if="currentSection === 'Candidates'" :electionId="electionId" />
           <VotersTab v-else-if="currentSection === 'Voters'" />
           <InstitutionalRecordsTab v-else-if="currentSection === 'Institutional records'" />
           <div v-else>

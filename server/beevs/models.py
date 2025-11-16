@@ -78,3 +78,51 @@ class Election(db.Model):
             'ends_at': self.ends_at.isoformat() if self.ends_at else None,
             'super_admin_id': self.super_admin_id
         }
+
+
+class Post(db.Model):
+    __tablename__ = 'posts'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
+
+    election = db.relationship('Election', backref=db.backref('posts', lazy=True, passive_deletes=True))
+
+    def to_dict(self, include_counts=False):
+        base = {
+            'id': self.id,
+            'title': self.title,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'election_id': self.election_id
+        }
+        if include_counts:
+            base['candidate_count'] = len(self.__dict__.get('candidates', []))
+        return base
+
+
+class Candidate(db.Model):
+    __tablename__ = 'candidates'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(255), nullable=False)
+    image_url = db.Column(db.Text, nullable=True)
+    wallet_address = db.Column(db.String(255), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id', ondelete='CASCADE'), nullable=False)
+
+    election = db.relationship('Election', backref=db.backref('candidates', lazy=True, passive_deletes=True))
+    post = db.relationship('Post', backref=db.backref('candidates', lazy=True, passive_deletes=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'image_url': self.image_url,
+            'wallet_address': self.wallet_address,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'election_id': self.election_id,
+            'post_id': self.post_id
+        }
