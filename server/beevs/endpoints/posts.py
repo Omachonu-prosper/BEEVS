@@ -77,7 +77,6 @@ def delete_post(post_id):
 
 
 @app.route('/api/v1/elections/<int:election_id>/posts', methods=['GET'], strict_slashes=False)
-@jwt_required()
 def list_posts(election_id):
     """
     List posts for an election. Query param include_candidates=true will include nested candidates

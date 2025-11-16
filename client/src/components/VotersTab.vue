@@ -156,10 +156,18 @@ const capturePhoto = async () => {
     }
   };
   await ensureDimensions();
-  canvas.width = video.videoWidth || 1280;
-  canvas.height = video.videoHeight || 720;
+
+  // center-crop to square
+  const vw = video.videoWidth || 1280;
+  const vh = video.videoHeight || 720;
+  const size = Math.min(vw, vh);
+  const sx = Math.max(0, Math.floor((vw - size) / 2));
+  const sy = Math.max(0, Math.floor((vh - size) / 2));
+
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
   canvas.toBlob((blob) => {
     if (!blob) {
       errors.value.push('Failed to capture image');
@@ -167,7 +175,7 @@ const capturePhoto = async () => {
     }
     const file = new File([blob], `voter_${Date.now()}.jpg`, { type: blob.type });
     // revoke previous preview
-    if (voterForm.imagePreview) URL.revokeObjectURL(voterForm.imagePreview);
+    if (voterForm.imagePreview) try { URL.revokeObjectURL(voterForm.imagePreview); } catch (e) {}
     voterForm.imageFile = file;
     voterForm.imagePreview = URL.createObjectURL(blob);
     stopCamera();

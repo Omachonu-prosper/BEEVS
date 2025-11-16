@@ -1,83 +1,148 @@
 <script setup>
-import { ref, reactive } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, reactive, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import SolarUserBold from '~icons/solar/user-bold';
+import { authFetch } from '@/utils/auth';
 
 const route = useRoute();
+const router = useRouter();
 const electionId = route.params.electionId;
+const electionTitle = ref('');
+const loadingPositions = ref(false);
+const positionsError = ref('');
 
-const positions = reactive([
-  {
-    id: 1,
-    title: 'President',
-    candidates: [
-      { id: 101, name: 'Alice Smith', selected: false },
-      { id: 102, name: 'Bob Johnson', selected: false },
-      { id: 103, name: 'Charlie Brown', selected: false },
-    ],
-  },
-  {
-    id: 2,
-    title: 'Vice President',
-    candidates: [
-      { id: 201, name: 'David Lee', selected: false },
-      { id: 202, name: 'Eve Davis', selected: false },
-      { id: 203, name: 'Frank White', selected: false },
-    ],
-  },
-  {
-    id: 3,
-    title: 'Secretary',
-    candidates: [
-      { id: 301, name: 'Grace Hall', selected: false },
-      { id: 302, name: 'Henry Green', selected: false },
-      { id: 303, name: 'Ivy King', selected: false },
-    ],
-  },
-]);
+const positions = ref([]); // will be loaded from backend
 
-const selectCandidate = (positionId, candidateId) => {
-  const position = positions.find(p => p.id === positionId);
-  if (position) {
-    position.candidates.forEach(c => (c.selected = false)); // Deselect all in this position
-    const candidate = position.candidates.find(c => c.id === candidateId);
-    if (candidate) {
-      candidate.selected = true; // Select the chosen candidate
+const loadPositions = async () => {
+  if (!electionId) return;
+  loadingPositions.value = true;
+  positionsError.value = '';
+  try {
+    const resp = await authFetch(`/api/v1/elections/${electionId}/posts?include_candidates=true`);
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      console.error('Failed to load posts', json);
+      positions.value = [];
+      positionsError.value = json?.message || 'Failed to load positions';
+      return;
     }
+    // map posts -> positions structure with selected flags
+    positions.value = (json?.data?.posts || []).map((p) => ({
+      id: p.id,
+      title: p.title,
+      candidates: (p.candidates || []).map((c) => ({ ...c, selected: false })),
+    }));
+  } catch (err) {
+    console.error('Error loading posts', err);
+    positions.value = [];
+    positionsError.value = 'Error loading positions';
+  }
+  finally {
+    loadingPositions.value = false;
   }
 };
 
-const submitVotes = () => {
-  const selectedVotes = positions.map(position => ({
+const loadElectionTitle = async () => {
+  if (!electionId) return;
+  try {
+    const resp = await authFetch('/api/v1/elections');
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      console.error('Failed to load elections', json);
+      electionTitle.value = `Election ${electionId}`;
+      return;
+    }
+    const elections = json?.data?.elections || [];
+    const found = elections.find((e) => String(e.id) === String(electionId));
+    electionTitle.value = found ? found.title : `Election ${electionId}`;
+  } catch (err) {
+    console.error('Error loading election title', err);
+    electionTitle.value = `Election ${electionId}`;
+  }
+};
+
+onMounted(async () => {
+  // Require prior voter authentication (vote token) before allowing access to the voting UI
+  try {
+    const voteToken = sessionStorage.getItem('vote_token');
+    if (!voteToken) {
+      // redirect to auth page
+      router.replace(`/vote/${electionId}/auth`);
+      return;
+    }
+  } catch (e) {
+    // if sessionStorage is unavailable, still redirect to auth page
+    router.replace(`/vote/${electionId}/auth`);
+    return;
+  }
+  await loadElectionTitle();
+  await loadPositions();
+});
+
+const selectCandidate = (positionId, candidateId) => {
+  const position = positions.value.find(p => p.id === positionId);
+  if (position) {
+    position.candidates.forEach(c => (c.selected = false)); // Deselect all in this position
+    const candidate = position.candidates.find(c => c.id === candidateId);
+    if (candidate) candidate.selected = true;
+  }
+};
+
+const showConfirm = ref(false);
+const confirmList = ref([]);
+
+const openConfirmation = () => {
+  const selectedVotes = positions.value.map(position => ({
     positionId: position.id,
     positionTitle: position.title,
     selectedCandidate: position.candidates.find(c => c.selected),
   }));
-  console.log('Submitted Votes:', selectedVotes);
+  const missing = selectedVotes.filter(sv => !sv.selectedCandidate);
+  if (missing.length > 0) {
+    alert('Please select a candidate for every position before submitting.');
+    return;
+  }
+  confirmList.value = selectedVotes;
+  showConfirm.value = true;
+};
+
+const cancelConfirmation = () => {
+  showConfirm.value = false;
+  confirmList.value = [];
+};
+
+const confirmVotes = async () => {
+  // Here you would send votes to the backend. For now, just log and show success.
+  console.log('Confirmed Votes:', confirmList.value);
+  showConfirm.value = false;
+  confirmList.value = [];
   alert('Votes submitted successfully!');
-  // Here you would typically send this data to your backend
 };
 </script>
 
 <template>
   <div class="min-h-screen bg-neutral-100 p-8">
     <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
-      <h1 class="text-3xl font-bold text-blue-600 mb-8 text-center">Cast Your Vote for {{ electionId }}</h1>
+  <h1 class="text-3xl font-bold text-blue-600 mb-8 text-center">Cast Your Vote for {{ electionTitle || electionId }}</h1>
 
-      <div v-for="position in positions" :key="position.id" class="mb-10">
+  <div v-if="loadingPositions" class="text-center py-8">Loading positions...</div>
+  <div v-else-if="positionsError" class="text-center text-red-600 py-8">{{ positionsError }}</div>
+  <div v-else-if="positions.length === 0" class="text-center text-neutral-600 py-8">No positions found for this election.</div>
+  <div v-else v-for="position in positions" :key="position.id" class="mb-10">
         <h2 class="text-2xl font-semibold text-gray-800 mb-6 border-b-2 border-blue-200 pb-2">{{ position.title }}</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <div
             v-for="candidate in position.candidates" :key="candidate.id"
             @click="selectCandidate(position.id, candidate.id)"
             :class="[
-              'bg-gray-100 p-6 rounded-lg shadow-md cursor-pointer transition-all duration-200',
+              'bg-gray-100 p-8 rounded-lg shadow-md cursor-pointer transition-all duration-200',
               candidate.selected ? 'border-2 border-blue-600 ring-2 ring-blue-300' : 'hover:shadow-lg hover:border-blue-300 border-2 border-transparent'
             ]"
           >
             <div class="flex flex-col items-center">
-              <SolarUserBold class="h-16 w-16 text-gray-500 mb-4" />
-              <p class="text-lg font-medium text-gray-700 text-center">{{ candidate.name }}</p>
+              <img v-if="candidate.image_url" :src="candidate.image_url" class="h-24 w-24 md:h-32 md:w-32 rounded-full object-cover mb-4" />
+              <SolarUserBold v-else class="h-24 w-24 md:h-32 md:w-32 text-gray-500 mb-4" />
+              <p class="text-xl font-medium text-gray-700 text-center">{{ candidate.name }}</p>
             </div>
           </div>
         </div>
@@ -88,11 +153,31 @@ const submitVotes = () => {
 
       <div class="mt-10 text-center">
         <button
-          @click="submitVotes"
+          @click="openConfirmation"
           class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg cursor-pointer transition-colors duration-300 text-xl"
         >
           Submit Votes
         </button>
+      </div>
+      
+      <!-- Confirmation modal -->
+      <div v-if="showConfirm" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-2xl p-6">
+          <h3 class="text-xl font-semibold mb-4">Please confirm that you want to vote</h3>
+          <p class="text-sm text-neutral-600 mb-4">Review the posts and selected candidates below. Click Confirm to submit your vote.</p>
+          <div class="space-y-3 max-h-64 overflow-auto mb-4">
+            <div v-for="item in confirmList" :key="item.positionId" class="p-3 border rounded">
+              <div class="flex items-center justify-between">
+                <div class="font-medium">{{ item.positionTitle }}</div>
+                <div class="text-neutral-700">{{ item.selectedCandidate?.name }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-end gap-3">
+            <button @click="cancelConfirmation" class="px-4 py-2 rounded border">Cancel</button>
+            <button @click="confirmVotes" class="px-4 py-2 rounded bg-blue-600 text-white">Confirm</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

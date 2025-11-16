@@ -6,6 +6,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import CreateElectionView from '@/views/CreateElectionView.vue'
 import ElectionView from '@/views/ElectionView.vue'
 import VotingView from '@/views/VotingView.vue'
+import VoteAuthView from '@/views/VoteAuthView.vue'
 import ResultsView from '@/views/ResultsView.vue'
 
 const router = createRouter({
@@ -30,6 +31,10 @@ const router = createRouter({
     {
       path: '/election/:id',
       component: ElectionView
+    },
+    {
+      path: '/vote/:electionId/auth',
+      component: VoteAuthView
     },
     {
       path: '/vote/:electionId',
