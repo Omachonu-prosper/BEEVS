@@ -126,3 +126,30 @@ class Candidate(db.Model):
             'election_id': self.election_id,
             'post_id': self.post_id
         }
+
+
+class InstitutionalRecord(db.Model):
+    __tablename__ = 'institutional_records'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(255), nullable=False)
+    registration_number = db.Column(db.String(100), unique=True, nullable=False)
+    department = db.Column(db.String(255), nullable=False)
+    faculty = db.Column(db.String(255), nullable=False)
+    level = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
+
+    election = db.relationship('Election', backref=db.backref('institutional_records', lazy=True, passive_deletes=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'registration_number': self.registration_number,
+            'department': self.department,
+            'faculty': self.faculty,
+            'level': self.level,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'election_id': self.election_id
+        }

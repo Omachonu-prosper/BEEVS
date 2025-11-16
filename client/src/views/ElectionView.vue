@@ -37,7 +37,7 @@ const handleSectionChange = (section) => {
           <PostsTab v-else-if="currentSection === 'Posts'" :electionId="electionId" />
           <CandidatesTab v-else-if="currentSection === 'Candidates'" :electionId="electionId" />
           <VotersTab v-else-if="currentSection === 'Voters'" />
-          <InstitutionalRecordsTab v-else-if="currentSection === 'Institutional records'" />
+          <InstitutionalRecordsTab v-else-if="currentSection === 'Institutional records'" :election-id="electionId"/>
           <div v-else>
             <h2 class="text-2xl font-bold text-blue-600 mb-6">Ops! This is an error that shouldnt be. Please contact the developer</h2>
           </div>
