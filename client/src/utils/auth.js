@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
 export async function login({ email, password }) {
   const resp = await fetch(`${API_BASE}/api/v1/auth/login`, {
@@ -50,9 +50,17 @@ export function logout() {
 }
 
 export async function authFetch(input, init = {}) {
+  // Normalize input: if a relative path (starts with /), prefix with API_BASE
+  let url = input
+  if (typeof input === 'string' && input.startsWith('/')) {
+    url = `${API_BASE}${input}`
+  }
+
   const headers = new Headers(init.headers || {})
   const token = getAccessToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
   init.headers = headers
-  return fetch(input, init)
+  // Ensure CORS mode for cross-origin requests
+  init.mode = init.mode || 'cors'
+  return fetch(url, init)
 }

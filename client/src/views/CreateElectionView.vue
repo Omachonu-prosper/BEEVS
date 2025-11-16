@@ -1,6 +1,7 @@
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { authFetch, getAccessToken } from '@/utils/auth'
 
 const router = useRouter()
 
@@ -11,10 +12,58 @@ const form = reactive({
   end_time: ""
 })
 
-const submitCreateElectionForm = () => {
-  // Handle form submission logic here
-  console.log(form)
-  router.push('/dashboard')
+const loading = ref(false)
+const error = ref('')
+
+const submitCreateElectionForm = async () => {
+  error.value = ''
+  loading.value = true
+  try {
+    if (!form.title || !form.scheduled_for || !form.start_time || !form.end_time) {
+      error.value = 'Please fill all fields.'
+      return
+    }
+
+    // Build ISO datetimes for starts_at and ends_at
+    const starts_at = new Date(`${form.scheduled_for}T${form.start_time}:00`).toISOString()
+    const ends_at = new Date(`${form.scheduled_for}T${form.end_time}:00`).toISOString()
+
+    const payload = {
+      title: form.title,
+      scheduled_for: form.scheduled_for,
+      starts_at,
+      ends_at
+    }
+
+    // Ensure we have an access token before attempting the request
+    const token = getAccessToken()
+    if (!token) {
+      error.value = 'Not authenticated. Please login.'
+      return
+    }
+
+    // Use a relative API path; authFetch will prefix the API base and attach the
+    // Authorization header automatically.
+    const resp = await authFetch(`/api/v1/elections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(payload)
+    })
+
+    const json = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      error.value = json?.message || 'Failed to create election'
+      return
+    }
+
+    // Success. Redirect to dashboard (or election page if desired)
+    router.push('/dashboard')
+  } catch (err) {
+    console.error(err)
+    error.value = err?.message || 'An error occurred'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

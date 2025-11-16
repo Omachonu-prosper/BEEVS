@@ -50,3 +50,31 @@ class Admin(db.Model):
     def is_super_admin(self):
         """Check if admin has super admin privileges"""
         return self.role == AdminRole.SUPER_ADMIN
+
+
+class Election(db.Model):
+    __tablename__ = 'elections'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    scheduled_for = db.Column(db.Date, nullable=False)
+    starts_at = db.Column(db.DateTime, nullable=True)
+    ends_at = db.Column(db.DateTime, nullable=True)
+    super_admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=False)
+
+    super_admin = db.relationship('Admin', backref=db.backref('elections', lazy=True))
+
+    def __repr__(self):
+        return f'<Election {self.title} ({self.id})>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'scheduled_for': self.scheduled_for.isoformat() if self.scheduled_for else None,
+            'starts_at': self.starts_at.isoformat() if self.starts_at else None,
+            'ends_at': self.ends_at.isoformat() if self.ends_at else None,
+            'super_admin_id': self.super_admin_id
+        }

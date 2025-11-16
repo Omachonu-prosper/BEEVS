@@ -53,10 +53,17 @@ const submitLoginForm = async () => {
         <div class="flex items-center justify-between">
           <button
             type="submit"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline cursor-pointer transition-colors duration-300">
-            Login
+            :disabled="loading"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline cursor-pointer transition-colors duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center">
+            <svg v-if="loading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+            <span v-if="!loading">Login</span>
+            <span v-else>Signing in...</span>
           </button>
         </div>
+        <p v-if="error" class="text-red-600 text-sm mt-3">{{ error }}</p>
       </form>
     </div>
   </div>

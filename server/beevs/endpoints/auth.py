@@ -36,11 +36,14 @@ def login():
         "role": admin.role.value,
         "email": admin.email
     }
+    # JWT libraries expect the `sub` (identity) claim to be a string in some
+    # configurations. Cast the admin id to string when creating tokens so
+    # downstream verification does not error with 'Subject must be a string'.
     access_token = create_access_token(
-        identity=admin.id,
+        identity=str(admin.id),
         additional_claims=additional_claims
     )
-    refresh_token = create_refresh_token(identity=admin.id)
+    refresh_token = create_refresh_token(identity=str(admin.id))
     
     # Prepare response data
     admin_data = {
