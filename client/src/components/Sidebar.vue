@@ -5,7 +5,7 @@ const props = defineProps({
 
 const emit = defineEmits(['section-change']);
 
-const actions = ['Details', 'Admins', 'Posts', 'Candidates', 'Voters', 'Institutional records'];
+const actions = ['Details', 'Posts', 'Candidates', 'Voters', 'Institutional records'];
 
 const changeSection = (section) => {
   emit('section-change', section);

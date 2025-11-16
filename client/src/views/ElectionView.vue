@@ -3,7 +3,6 @@ import Navbar from '@/components/Navbar.vue';
 import Sidebar from '@/components/Sidebar.vue';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DetailsTab from '@/components/DetailsTab.vue';
-import AdminsTab from '@/components/AdminsTab.vue';
 import PostsTab from '@/components/PostsTab.vue';
 import CandidatesTab from '@/components/CandidatesTab.vue';
 import VotersTab from '@/components/VotersTab.vue';
@@ -35,7 +34,6 @@ const handleSectionChange = (section) => {
         <Breadcrumb :crumbs="crumbs" />
         <div class="bg-white mt-5 p-8 rounded-2xl shadow-lg">
           <DetailsTab v-if="currentSection === 'Details'" />
-          <AdminsTab v-else-if="currentSection === 'Admins'" />
           <PostsTab v-else-if="currentSection === 'Posts'" />
           <CandidatesTab v-else-if="currentSection === 'Candidates'" />
           <VotersTab v-else-if="currentSection === 'Voters'" />
