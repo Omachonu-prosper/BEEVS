@@ -153,3 +153,31 @@ class InstitutionalRecord(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'election_id': self.election_id
         }
+
+
+class Voter(db.Model):
+    __tablename__ = 'voters'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=True)
+    image_url = db.Column(db.Text, nullable=True)
+    wallet_address = db.Column(db.String(255), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
+    student_record_id = db.Column(db.Integer, db.ForeignKey('institutional_records.id', ondelete='CASCADE'), nullable=False)
+
+    election = db.relationship('Election', backref=db.backref('voters', lazy=True, passive_deletes=True))
+    student_record = db.relationship('InstitutionalRecord', backref=db.backref('voter', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'image_url': self.image_url,
+            'wallet_address': self.wallet_address,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'election_id': self.election_id,
+            'student_record_id': self.student_record_id
+        }
