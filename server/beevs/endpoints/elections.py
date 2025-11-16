@@ -10,7 +10,6 @@ from datetime import datetime
 @app.route('/api/v1/elections', methods=['POST'], strict_slashes=False)
 @jwt_required()
 def create_election():
-    print(request.headers)
     data = request.get_json()
     if not data:
         raise ValidationError(message="Invalid request format", errors={"format": "JSON payload required"}, status_code=400)
@@ -84,3 +83,23 @@ def create_election():
     db.session.commit()
 
     return APIResponse.success(message='Election created', data=election.to_dict(), status_code=201)
+
+
+@app.route('/api/v1/elections', methods=['GET'], strict_slashes=False)
+@jwt_required()
+def list_elections():
+    """
+    List elections. Returns all elections for now.
+    """
+    # identity stored as string in token
+    admin_id_raw = get_jwt_identity()
+    try:
+        admin_id = int(admin_id_raw)
+    except Exception:
+        raise AuthorizationError(message='Invalid token identity')
+
+    # For now, return all elections. Later we can filter by admin or add pagination.
+    elections = Election.query.order_by(Election.created_at.desc()).all()
+    data = [e.to_dict() for e in elections]
+
+    return APIResponse.success(message='Elections fetched', data={'elections': data}, status_code=200)
