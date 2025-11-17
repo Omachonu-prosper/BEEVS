@@ -130,10 +130,13 @@ class Candidate(db.Model):
 
 class InstitutionalRecord(db.Model):
     __tablename__ = 'institutional_records'
+    __table_args__ = (
+        db.UniqueConstraint('registration_number', 'election_id', name='uq_institutional_record_registration_election'),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
-    registration_number = db.Column(db.String(100), unique=True, nullable=False)
+    registration_number = db.Column(db.String(100), nullable=False)
     department = db.Column(db.String(255), nullable=False)
     faculty = db.Column(db.String(255), nullable=False)
     level = db.Column(db.Integer, nullable=False)

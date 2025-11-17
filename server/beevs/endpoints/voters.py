@@ -129,7 +129,7 @@ def create_voter():
         record = None
 
     if not record:
-        record = InstitutionalRecord.query.filter_by(registration_number=reg_input).first()
+        record = InstitutionalRecord.query.filter_by(registration_number=reg_input, election_id=int(election_id)).first()
 
     if not record:
         raise ValidationError(message='Institutional record not found', status_code=400)

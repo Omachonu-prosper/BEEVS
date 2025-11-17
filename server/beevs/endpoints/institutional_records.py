@@ -45,9 +45,9 @@ def upload_institutional_records(election_id):
     errors = []
     seen_reg_nos = set()
 
-    # preload existing registration_numbers to check uniqueness quickly
+    # preload existing registration_numbers for this election to check uniqueness quickly
     try:
-        existing_regs = {r[0] for r in InstitutionalRecord.query.with_entities(InstitutionalRecord.registration_number).all()}
+        existing_regs = {r[0] for r in InstitutionalRecord.query.with_entities(InstitutionalRecord.registration_number).filter_by(election_id=election_id).all()}
     except Exception:
         existing_regs = set()
 
@@ -71,7 +71,7 @@ def upload_institutional_records(election_id):
             if reg_no in seen_reg_nos:
                 row_errors['registration_number'] = 'Duplicate registration_number in CSV'
             if reg_no in existing_regs:
-                row_errors['registration_number'] = 'registration_number already exists in database'
+                row_errors['registration_number'] = 'registration_number already exists for this election'
 
         if row_errors:
             errors.append({'row': idx, 'errors': row_errors, 'data': data})
