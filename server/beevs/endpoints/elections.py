@@ -5,6 +5,56 @@ from beevs import db
 from beevs.models import Election
 from beevs.exceptions import ValidationError, AuthorizationError
 from datetime import datetime
+from beevs.contract import ContractService
+from beevs.models import Vote
+from flask import current_app as app
+
+
+def _sanitize_for_json(obj):
+    """Recursively convert web3/eth types (HexBytes, bytes) into JSON-serializable forms.
+
+    - bytes/bytearray/HexBytes -> 0x-prefixed hex string
+    - lists/dicts -> processed recursively
+    - other scalars returned unchanged
+    """
+    # Avoid importing HexBytes directly to keep dependencies minimal
+    from hexbytes import HexBytes as _HexBytes
+    # AttributeDict and other dict-like structures may not be plain dicts
+
+    if obj is None:
+        return None
+
+    # Convert bytes-like to hex
+    if isinstance(obj, _HexBytes) or isinstance(obj, (bytes, bytearray)):
+        try:
+            return '0x' + bytes(obj).hex()
+        except Exception:
+            return str(obj)
+
+    # Lists/tuples/sets -> sanitize elements
+    if isinstance(obj, (list, tuple, set)):
+        return [ _sanitize_for_json(v) for v in obj ]
+
+    # Dict-like objects (including web3 AttributeDict) -> sanitize key/values
+    if hasattr(obj, 'items'):
+        result = {}
+        try:
+            for k, v in dict(obj).items():
+                result[k] = _sanitize_for_json(v)
+            return result
+        except Exception:
+            # Fallthrough to str conversion
+            return str(obj)
+
+    # Primitive types that are JSON-serializable
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+
+    # Unknown types -> string representation
+    try:
+        return str(obj)
+    except Exception:
+        return None
 
 
 @app.route('/api/v1/elections', methods=['POST'], strict_slashes=False)
@@ -79,6 +129,77 @@ def create_election():
         super_admin_id=admin_id
     )
 
+    db.session.add(election)
+    db.session.commit()
+
+    # After creating the DB record, create the election on-chain using the relayer
+    try:
+        cs = ContractService()
+    except Exception as e:
+        app.logger.exception('ContractService not configured')
+        return APIResponse.error(message='Election created locally but contract service not configured', errors={'error': str(e), 'election': election.to_dict()}, status_code=201)
+
+    # determine timestamps
+    if election.starts_at:
+        start_ts = int(election.starts_at.timestamp())
+    elif election.scheduled_for:
+        start_ts = int(datetime.combine(election.scheduled_for, datetime.min.time()).timestamp())
+    else:
+        start_ts = 0
+
+    if election.ends_at:
+        end_ts = int(election.ends_at.timestamp())
+    else:
+        end_ts = 0
+
+    try:
+        res = cs.send_transaction('createElection', [election.title, start_ts, end_ts], wait_for_receipt=True, timeout=180)
+    except Exception as e:
+        app.logger.exception('Failed to send createElection tx')
+        return APIResponse.error(message='Election created locally but failed to create on-chain', errors={'error': str(e)}, status_code=500)
+
+    tx_hash = res.get('tx_hash')
+    receipt = res.get('receipt')
+
+    # record vote/tx
+    vote = Vote(
+        election_id=election.id,
+        voter_id=None,
+        candidate_id=None,
+        action='create_election',
+        tx_hash=tx_hash,
+        status='pending'
+    )
+
+    if receipt:
+        try:
+            contract = cs.get_contract()
+            live_receipt = cs.wait_for_receipt(tx_hash, timeout=10)
+            events = []
+            if live_receipt:
+                events = contract.events.ElectionCreated().process_receipt(live_receipt)
+            else:
+                try:
+                    events = contract.events.ElectionCreated().process_receipt(receipt)
+                except Exception:
+                    events = []
+
+            if events:
+                evt = events[0]
+                onchain_id = int(evt['args']['electionId'])
+                election.onchain_id = onchain_id
+                vote.status = 'confirmed'
+                vote.block_number = int(receipt.get('blockNumber')) if receipt.get('blockNumber') else None
+                vote.receipt = _sanitize_for_json(receipt)
+            else:
+                vote.status = 'pending'
+                vote.receipt = _sanitize_for_json(receipt)
+        except Exception:
+            vote.status = 'pending'
+            vote.receipt = _sanitize_for_json(receipt)
+            app.logger.exception('Failed to parse receipt or event')
+
+    db.session.add(vote)
     db.session.add(election)
     db.session.commit()
 

@@ -62,6 +62,7 @@ class Election(db.Model):
     starts_at = db.Column(db.DateTime, nullable=True)
     ends_at = db.Column(db.DateTime, nullable=True)
     super_admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=False)
+    onchain_id = db.Column(db.Integer, nullable=True, unique=False)
 
     super_admin = db.relationship('Admin', backref=db.backref('elections', lazy=True))
 
@@ -77,6 +78,7 @@ class Election(db.Model):
             'starts_at': self.starts_at.isoformat() if self.starts_at else None,
             'ends_at': self.ends_at.isoformat() if self.ends_at else None,
             'super_admin_id': self.super_admin_id
+            , 'onchain_id': self.onchain_id
         }
 
 
