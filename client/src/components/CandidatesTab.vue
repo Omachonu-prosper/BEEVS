@@ -17,6 +17,7 @@ const fileInput = ref(null);
 
 const postsWithCandidates = ref([]);
 const loading = ref(false);
+const addLoading = ref(false);
 const error = ref('');
 
 const totalCandidates = computed(() => {
@@ -84,6 +85,7 @@ const addCandidate = async () => {
   }
 
   try {
+    addLoading.value = true
     const form = new FormData();
     form.append('name', newCandidateName.value);
     form.append('election_id', props.electionId);
@@ -106,6 +108,9 @@ const addCandidate = async () => {
   } catch (err) {
     console.error(err);
     popupError.value = err?.message || 'Failed to add candidate';
+  }
+  finally {
+    addLoading.value = false
   }
 };
 
@@ -187,10 +192,19 @@ const closeAddCandidatePopup = () => {
           </div>
         <p v-if="popupError" class="text-red-600 text-sm mb-2">{{ popupError }}</p>
       </template>
-      <template #footer>
-  <button @click="addCandidate" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg mr-2 cursor-pointer transition-colors duration-300">Add</button>
+    <template #footer>
+  <div class="flex items-center justify-center gap-3">
+  <button @click="addCandidate" :disabled="addLoading" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg mr-2 cursor-pointer transition-colors duration-300 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center">
+    <svg v-if="addLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    </svg>
+    <span v-if="!addLoading">Add</span>
+    <span v-else>Adding...</span>
+  </button>
   <button @click="closeAddCandidatePopup" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg cursor-pointer transition-colors duration-300">Cancel</button>
-      </template>
+  </div>
+    </template>
     </Popup>
   </div>
 </template>

@@ -5,7 +5,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 from beevs.response import APIResponse
 from beevs import db
-from beevs.models import Candidate, Election, Post
+from beevs.models import Candidate, Election, Post, Vote
+from beevs.contract import ContractService
+from hexbytes import HexBytes
 from beevs.exceptions import ValidationError, AuthorizationError, NotFoundError
 
 
@@ -111,6 +113,68 @@ def create_candidate():
 
     db.session.add(candidate)
     db.session.commit()
+
+    # Attempt to add candidate on-chain if the election has an onchain_id and contract is configured
+    try:
+        if election.onchain_id:
+            cs = ContractService()
+            # send transaction: addCandidate(uint256 electionId, string name)
+            res = cs.send_transaction('addCandidate', [int(election.onchain_id), candidate.name], wait_for_receipt=True, timeout=120)
+            tx_hash = res.get('tx_hash')
+            receipt = res.get('receipt')
+
+            # record a Vote-like tx record for auditing
+            vote = Vote(
+                election_id=election.id,
+                voter_id=None,
+                candidate_id=candidate.id,
+                action='add_candidate',
+                tx_hash=tx_hash,
+                status='pending'
+            )
+
+            if receipt:
+                # sanitize receipt: convert HexBytes/bytes to hex strings
+                def _sanitize(obj):
+                    if obj is None:
+                        return None
+                    if isinstance(obj, HexBytes) or isinstance(obj, (bytes, bytearray)):
+                        return '0x' + bytes(obj).hex()
+                    if isinstance(obj, dict):
+                        return {k: _sanitize(v) for k, v in dict(obj).items()}
+                    if isinstance(obj, (list, tuple, set)):
+                        return [_sanitize(v) for v in obj]
+                    if isinstance(obj, (str, int, float, bool)):
+                        return obj
+                    try:
+                        return str(obj)
+                    except Exception:
+                        return None
+
+                vote.receipt = _sanitize(receipt)
+
+                # try parse event
+                try:
+                    contract = cs.get_contract()
+                    events = contract.events.CandidateAdded().process_receipt(receipt)
+                    if events:
+                        evt = events[0]
+                        onchain_cid = int(evt['args'].get('candidateId') or evt['args'].get('candidateId'))
+                        candidate.onchain_id = onchain_cid
+                        vote.status = 'confirmed'
+                        vote.block_number = int(receipt.get('blockNumber')) if receipt.get('blockNumber') else None
+                except Exception:
+                    # leave candidate.onchain_id unset; keep vote pending with receipt
+                    app.logger.exception('Failed to parse candidate add event')
+
+            db.session.add(vote)
+            db.session.add(candidate)
+            db.session.commit()
+
+    except Exception:
+        # Propagate contract errors so caller can see them — do not silently swallow
+        app.logger.exception('Failed to create candidate on-chain')
+        raise
 
     return APIResponse.success(message='Candidate created', data={'candidate': candidate.to_dict()}, status_code=201)
 

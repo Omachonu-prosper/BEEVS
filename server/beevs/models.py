@@ -114,6 +114,7 @@ class Candidate(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id', ondelete='CASCADE'), nullable=False)
+    onchain_id = db.Column(db.Integer, nullable=True)
 
     election = db.relationship('Election', backref=db.backref('candidates', lazy=True, passive_deletes=True))
     post = db.relationship('Post', backref=db.backref('candidates', lazy=True, passive_deletes=True))
@@ -126,7 +127,8 @@ class Candidate(db.Model):
             'wallet_address': self.wallet_address,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'election_id': self.election_id,
-            'post_id': self.post_id
+            'post_id': self.post_id,
+            'onchain_id': self.onchain_id
         }
 
 
