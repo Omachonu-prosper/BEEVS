@@ -18,6 +18,7 @@ const voterForm = reactive({
 const voters = ref([]);
 const loading = ref(false);
 const errors = ref([]);
+const registerLoading = ref(false);
 const institutionalRecords = ref([]);
 const success = ref('');
 const successTimer = ref(null);
@@ -40,6 +41,7 @@ const loadVoters = async () => {
     }
     voters.value = json?.data?.voters || [];
     registeredVoters.value = voters.value.length;
+    castVotes.value = json?.data?.cast_votes || 0;
   } catch (err) {
     console.error(err);
   } finally {
@@ -208,6 +210,7 @@ const registerVoter = async () => {
   form.append('image', voterForm.imageFile);
 
   try {
+    registerLoading.value = true
     const resp = await authFetch('/api/v1/voters', { method: 'POST', body: form });
     const json = await resp.json().catch(() => ({}));
     if (!resp.ok) {
@@ -242,6 +245,8 @@ const registerVoter = async () => {
   } catch (err) {
     console.error(err);
     errors.value = [err?.message || 'Registration failed'];
+  } finally {
+    registerLoading.value = false
   }
 };
 
@@ -332,7 +337,14 @@ const getRegistrationNumber = (recordId) => {
             <li v-for="(e,i) in errors" :key="i">{{ e }}</li>
           </ul>
         </div>
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">Register Voter</button>
+        <button type="submit" :disabled="registerLoading" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center">
+          <svg v-if="registerLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          </svg>
+          <span v-if="!registerLoading">Register Voter</span>
+          <span v-else>Registering...</span>
+        </button>
       </form>
     </div>
 

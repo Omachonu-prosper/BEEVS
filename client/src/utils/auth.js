@@ -57,7 +57,12 @@ export async function authFetch(input, init = {}) {
   }
 
   const headers = new Headers(init.headers || {})
-  const token = getAccessToken()
+  // allow caller to override which token to use for Authorization by passing `authToken` in init
+  // e.g. authFetch(url, { authToken: '<token>' })
+  const overrideToken = init.authToken
+  const token = typeof overrideToken !== 'undefined' ? overrideToken : getAccessToken()
+  // remove authToken from init so it isn't sent as a header
+  if (init && Object.prototype.hasOwnProperty.call(init, 'authToken')) delete init.authToken
   if (token) headers.set('Authorization', `Bearer ${token}`)
   init.headers = headers
   // Ensure CORS mode for cross-origin requests

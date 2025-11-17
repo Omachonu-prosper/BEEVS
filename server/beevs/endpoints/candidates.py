@@ -11,7 +11,7 @@ from hexbytes import HexBytes
 from beevs.exceptions import ValidationError, AuthorizationError, NotFoundError
 
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 
 def allowed_file(filename):

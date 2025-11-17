@@ -173,6 +173,7 @@ class Voter(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
     student_record_id = db.Column(db.Integer, db.ForeignKey('institutional_records.id', ondelete='CASCADE'), nullable=False)
+    onchain_id = db.Column(db.Integer, nullable=True)
 
     election = db.relationship('Election', backref=db.backref('voters', lazy=True, passive_deletes=True))
     student_record = db.relationship('InstitutionalRecord', backref=db.backref('voter', lazy=True))
@@ -186,7 +187,8 @@ class Voter(db.Model):
             'wallet_address': self.wallet_address,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'election_id': self.election_id,
-            'student_record_id': self.student_record_id
+            'student_record_id': self.student_record_id,
+            'onchain_id': self.onchain_id
         }
 
 

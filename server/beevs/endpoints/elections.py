@@ -224,3 +224,46 @@ def list_elections():
     data = [e.to_dict() for e in elections]
 
     return APIResponse.success(message='Elections fetched', data={'elections': data}, status_code=200)
+
+
+@app.route('/api/v1/elections/<int:election_id>', methods=['GET'], strict_slashes=False)
+@jwt_required()
+def get_election(election_id):
+    """Return a single election with some useful counts (candidates, voters, posts).
+
+    This is a lightweight endpoint used by the frontend DetailsTab to show metadata
+    about a specific election.
+    """
+    # identity stored as string in token
+    admin_id_raw = get_jwt_identity()
+    try:
+        admin_id = int(admin_id_raw)
+    except Exception:
+        raise AuthorizationError(message='Invalid token identity')
+
+    election = Election.query.get(election_id)
+    if not election:
+        return APIResponse.error(message='Election not found', status_code=404)
+
+    # Compute some quick counts. Relationships use lazy loading so these will be simple
+    # attribute accesses that load the related rows.
+    candidate_count = len(election.candidates) if hasattr(election, 'candidates') else 0
+    voter_count = len(election.voters) if hasattr(election, 'voters') else 0
+    post_count = len(election.posts) if hasattr(election, 'posts') else 0
+    
+    # Count cast votes (unique voters who have cast at least one vote)
+    cast_votes_count = db.session.query(Vote.voter_id).filter(
+        Vote.election_id == election_id,
+        Vote.action == 'vote',
+        Vote.voter_id.isnot(None)
+    ).distinct().count()
+
+    payload = election.to_dict()
+    payload.update({
+        'candidate_count': candidate_count,
+        'voter_count': voter_count,
+        'post_count': post_count,
+        'cast_votes': cast_votes_count
+    })
+
+    return APIResponse.success(message='Election fetched', data={'election': payload}, status_code=200)
