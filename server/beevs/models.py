@@ -184,3 +184,41 @@ class Voter(db.Model):
             'election_id': self.election_id,
             'student_record_id': self.student_record_id
         }
+
+
+class Vote(db.Model):
+    __tablename__ = 'votes'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=True)
+    voter_id = db.Column(db.Integer, db.ForeignKey('voters.id', ondelete='SET NULL'), nullable=True)
+    candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id', ondelete='SET NULL'), nullable=True)
+    action = db.Column(db.String(64), nullable=False, default='vote')
+    tx_hash = db.Column(db.String(255), unique=False, nullable=True)
+    status = db.Column(db.String(32), nullable=False, default='pending')
+    block_number = db.Column(db.Integer, nullable=True)
+    receipt = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+
+    election = db.relationship('Election', backref=db.backref('votes', lazy=True, passive_deletes=True))
+    voter = db.relationship('Voter', backref=db.backref('votes', lazy=True, passive_deletes=True))
+    candidate = db.relationship('Candidate', backref=db.backref('votes', lazy=True, passive_deletes=True))
+
+    def __repr__(self):
+        return f'<Vote {self.action} {self.tx_hash} ({self.status})>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'election_id': self.election_id,
+            'voter_id': self.voter_id,
+            'candidate_id': self.candidate_id,
+            'action': self.action,
+            'tx_hash': self.tx_hash,
+            'status': self.status,
+            'block_number': self.block_number,
+            'receipt': self.receipt,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
