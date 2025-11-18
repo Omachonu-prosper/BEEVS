@@ -267,3 +267,75 @@ def get_election(election_id):
     })
 
     return APIResponse.success(message='Election fetched', data={'election': payload}, status_code=200)
+
+
+@app.route('/api/v1/elections/<int:election_id>/results', methods=['GET'], strict_slashes=False)
+def get_election_results(election_id):
+    """Get election results grouped by posts with vote counts for each candidate.
+    
+    This endpoint aggregates votes from the Vote table and fetches on-chain data
+    if available. Returns results structured by posts/positions.
+    """
+    from beevs.models import Post, Candidate, Vote
+    
+    election = Election.query.get(election_id)
+    if not election:
+        return APIResponse.error(message='Election not found', status_code=404)
+    
+    # Get all posts for this election with their candidates
+    posts = Post.query.filter_by(election_id=election_id).order_by(Post.id.asc()).all()
+    
+    results = []
+    for post in posts:
+        candidates_data = []
+        
+        # Get all candidates for this post
+        candidates = Candidate.query.filter_by(post_id=post.id).order_by(Candidate.id.asc()).all()
+        
+        for candidate in candidates:
+            # Count votes for this candidate from the Vote table
+            vote_count = db.session.query(Vote).filter(
+                Vote.candidate_id == candidate.id,
+                Vote.action == 'vote',
+                Vote.status == 'confirmed'
+            ).count()
+            
+            # Try to get on-chain vote count if available
+            onchain_votes = None
+            if election.onchain_id and candidate.onchain_id:
+                try:
+                    cs = ContractService()
+                    # Call contract.getCandidate(electionId, candidateId) -> (name, voteCount)
+                    result = cs.call('getCandidate', election.onchain_id, candidate.onchain_id)
+                    if result and len(result) >= 2:
+                        onchain_votes = int(result[1])
+                except Exception as e:
+                    app.logger.warning(f'Failed to fetch on-chain votes for candidate {candidate.id}: {e}')
+            
+            candidates_data.append({
+                'id': candidate.id,
+                'name': candidate.name,
+                'image_url': candidate.image_url,
+                'votes': onchain_votes if onchain_votes is not None else vote_count,
+                'onchain_votes': onchain_votes,
+                'db_votes': vote_count
+            })
+        
+        # Sort candidates by votes descending
+        candidates_data.sort(key=lambda x: x['votes'], reverse=True)
+        
+        results.append({
+            'id': post.id,
+            'title': post.title,
+            'candidates': candidates_data,
+            'winner': candidates_data[0]['name'] if candidates_data else None
+        })
+    
+    return APIResponse.success(
+        message='Election results fetched',
+        data={
+            'election': election.to_dict(),
+            'results': results
+        },
+        status_code=200
+    )

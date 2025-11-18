@@ -1,39 +1,15 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { authFetch } from '@/utils/auth';
 
 const route = useRoute();
 const electionId = route.params.electionId;
 
-const electionResults = ref([
-  {
-    id: 1,
-    title: 'President',
-    candidates: [
-      { id: 101, name: 'Alice Smith', votes: 120 },
-      { id: 102, name: 'Bob Johnson', votes: 150 },
-      { id: 103, name: 'Charlie Brown', votes: 80 },
-    ],
-  },
-  {
-    id: 2,
-    title: 'Vice President',
-    candidates: [
-      { id: 201, name: 'David Lee', votes: 90 },
-      { id: 202, name: 'Eve Davis', votes: 110 },
-      { id: 203, name: 'Frank White', votes: 70 },
-    ],
-  },
-  {
-    id: 3,
-    title: 'Secretary',
-    candidates: [
-      { id: 301, name: 'Grace Hall', votes: 60 },
-      { id: 302, name: 'Henry Green', votes: 130 },
-      { id: 303, name: 'Ivy King', votes: 100 },
-    ],
-  },
-]);
+const electionResults = ref([]);
+const election = ref({});
+const loading = ref(true);
+const error = ref('');
 
 const getWinner = (candidates) => {
   if (!candidates || candidates.length === 0) return 'N/A';
@@ -50,29 +26,103 @@ const getBarWidth = (votes, maxVotes) => {
   if (maxVotes === 0) return '0%';
   return `${(votes / maxVotes) * 100}%`;
 };
+
+const getPercentage = (votes, totalVotes) => {
+  if (totalVotes === 0) return '0';
+  return ((votes / totalVotes) * 100).toFixed(1);
+};
+
+const getTotalVotes = (candidates) => {
+  if (!candidates || candidates.length === 0) return 0;
+  return candidates.reduce((sum, c) => sum + (c.votes || 0), 0);
+};
+
+async function loadResults() {
+  loading.value = true;
+  error.value = '';
+  try {
+    const resp = await authFetch(`/api/v1/elections/${electionId}/results`);
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      error.value = json?.message || 'Failed to load election results';
+      return;
+    }
+    election.value = json?.data?.election || {};
+    electionResults.value = json?.data?.results || [];
+  } catch (err) {
+    console.error(err);
+    error.value = err?.message || 'Failed to load election results';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(() => {
+  loadResults();
+});
 </script>
 
 <template>
   <div class="min-h-screen bg-neutral-100 p-8">
     <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
-      <h1 class="text-3xl font-bold text-blue-600 mb-8 text-center">Election Results for {{ electionId }}</h1>
+      <h1 class="text-3xl font-bold text-blue-600 mb-2 text-center">Election Results</h1>
+      <p v-if="election.title" class="text-xl text-gray-600 mb-8 text-center">{{ election.title }}</p>
 
-      <div v-for="position in electionResults" :key="position.id" class="mb-10">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-6 border-b-2 border-blue-200 pb-2">{{ position.title }}</h2>
-        <div class="space-y-4">
-          <div v-for="candidate in position.candidates" :key="candidate.id" class="flex items-center">
-            <p class="w-1/4 text-lg font-medium text-gray-700">{{ candidate.name }}</p>
-            <div class="w-3/4 bg-gray-200 rounded-full h-6 relative">
-              <div 
-                :style="{ width: getBarWidth(candidate.votes, getMaxVotes(position.candidates)) }"
-                class="bg-blue-500 h-full rounded-full flex items-center justify-end pr-2 text-white text-sm font-bold"
-              >
-                {{ candidate.votes }}
+      <div v-if="loading" class="text-center py-12">
+        <div class="inline-block">
+          <svg class="animate-spin h-12 w-12 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          </svg>
+        </div>
+        <p class="mt-4 text-gray-600">Loading results...</p>
+      </div>
+
+      <div v-else-if="error" class="text-center py-12">
+        <p class="text-red-600 text-lg">{{ error }}</p>
+      </div>
+
+      <div v-else-if="electionResults.length === 0" class="text-center py-12">
+        <p class="text-gray-600 text-lg">No results available yet.</p>
+      </div>
+
+      <div v-else>
+        <div v-for="position in electionResults" :key="position.id" class="mb-10">
+          <h2 class="text-2xl font-semibold text-gray-800 mb-6 border-b-2 border-blue-200 pb-2">{{ position.title }}</h2>
+          
+          <div v-if="position.candidates.length === 0" class="text-gray-500 italic mb-4">
+            No candidates for this position.
+          </div>
+          
+          <div v-else class="space-y-4">
+            <div v-for="candidate in position.candidates" :key="candidate.id" class="flex items-center gap-4">
+              <img v-if="candidate.image_url" :src="candidate.image_url" :alt="candidate.name" class="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+              <div v-else class="w-12 h-12 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center text-gray-600 font-bold">
+                {{ candidate.name.charAt(0) }}
+              </div>
+              <p class="w-1/5 text-lg font-medium text-gray-700">{{ candidate.name }}</p>
+              <div class="flex-1 flex items-center gap-3">
+                <div class="flex-1 bg-gray-200 rounded-full h-8 relative overflow-hidden">
+                  <div 
+                    :style="{ width: getBarWidth(candidate.votes, getMaxVotes(position.candidates)) }"
+                    :class="[
+                      'h-full rounded-full transition-all duration-500',
+                      candidate.votes === getMaxVotes(position.candidates) && candidate.votes > 0 ? 'bg-green-500' : 'bg-blue-500'
+                    ]"
+                  ></div>
+                </div>
+                <div class="flex items-center gap-2 min-w-[120px]">
+                  <span class="text-lg font-bold text-gray-800">{{ candidate.votes }}</span>
+                  <span class="text-sm text-gray-600">({{ getPercentage(candidate.votes, getTotalVotes(position.candidates)) }}%)</span>
+                </div>
               </div>
             </div>
           </div>
+          
+          <p v-if="position.winner" class="text-xl font-bold text-green-600 mt-6 text-center">
+            Winner: {{ position.winner }}
+          </p>
         </div>
-        <p class="text-xl font-bold text-green-600 mt-6 text-center">Winner: {{ getWinner(position.candidates) }}</p>
       </div>
     </div>
   </div>
