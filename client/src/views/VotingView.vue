@@ -140,10 +140,10 @@ const confirmVotes = async () => {
     // Success: show info, clear token and redirect to auth page for next voter
     voteInfo.value = json?.message || 'Votes submitted successfully';
     try { sessionStorage.removeItem('vote_token'); } catch (e) {}
-    // give user a short moment to see the message, then redirect
+    // give user a longer moment to see the success message, then redirect
     setTimeout(() => {
       router.replace(`/vote/${electionId}/auth`);
-    }, 800);
+    }, 3000);
   } catch (err) {
     console.error(err);
     alert(err?.message || 'Failed to submit votes');
@@ -162,8 +162,20 @@ const confirmVotes = async () => {
 
   <div v-if="loadingPositions" class="text-center py-8">Loading positions...</div>
   <div v-else-if="positionsError" class="text-center text-red-600 py-8">{{ positionsError }}</div>
-  <div v-else-if="voteError" class="text-center text-red-600 py-4">{{ voteError }}</div>
-  <div v-else-if="voteInfo" class="text-center text-green-600 py-4">{{ voteInfo }}</div>
+  <div v-else-if="voteError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6 text-center">
+    <strong class="font-bold">Error!</strong>
+    <span class="block sm:inline ml-1">{{ voteError }}</span>
+  </div>
+  <div v-else-if="voteInfo" class="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg relative mb-6 text-center">
+    <div class="flex items-center justify-center mb-2">
+      <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+    </div>
+    <strong class="font-bold text-xl">Success!</strong>
+    <p class="block mt-2">{{ voteInfo }}</p>
+    <p class="text-sm mt-3 text-green-600">Redirecting to authentication page...</p>
+  </div>
   <div v-else-if="positions.length === 0" class="text-center text-neutral-600 py-8">No positions found for this election.</div>
   <div v-else v-for="position in positions" :key="position.id" class="mb-10">
         <h2 class="text-2xl font-semibold text-gray-800 mb-6 border-b-2 border-blue-200 pb-2">{{ position.title }}</h2>

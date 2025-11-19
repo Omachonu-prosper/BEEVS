@@ -1,9 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { authFetch } from '@/utils/auth';
 
 const route = useRoute();
+const router = useRouter();
 const electionId = route.params.electionId;
 
 const electionResults = ref([]);
@@ -56,6 +57,10 @@ async function loadResults() {
     loading.value = false;
   }
 }
+
+const goToAudit = () => {
+  router.push(`/audit/${electionId}/auth`);
+};
 
 onMounted(() => {
   loadResults();
@@ -122,6 +127,25 @@ onMounted(() => {
           <p v-if="position.winner" class="text-xl font-bold text-green-600 mt-6 text-center">
             Winner: {{ position.winner }}
           </p>
+        </div>
+
+        <!-- Audit Trail Link -->
+        <div class="mt-12 pt-8 border-t border-gray-200">
+          <div class="bg-blue-50 rounded-lg p-6 text-center">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Verify Your Vote</h3>
+            <p class="text-sm text-gray-600 mb-4">
+              Did you vote in this election? View your voting audit trail and verify your votes on the blockchain.
+            </p>
+            <button
+              @click="goToAudit"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-300 inline-flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.012 4.536A9 9 0 1118 3.52"></path>
+              </svg>
+              Audit My Vote
+            </button>
+          </div>
         </div>
       </div>
     </div>

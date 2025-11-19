@@ -7,16 +7,12 @@ from flask_jwt_extended import jwt_required, create_access_token, get_jwt
 from werkzeug.utils import secure_filename
 from beevs.response import APIResponse
 from beevs import db
-from beevs.models import Voter, Election, InstitutionalRecord
+from beevs.models import Voter, Election, InstitutionalRecord, Post, Candidate, Vote
 from beevs.exceptions import ValidationError, NotFoundError
 from deepface import DeepFace
-from beevs.models import Candidate, Vote
 from beevs.contract import ContractService
 from hexbytes import HexBytes
 from web3.exceptions import ContractLogicError
-from beevs.contract import ContractService
-from beevs.models import Vote
-from hexbytes import HexBytes
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
@@ -486,3 +482,150 @@ def cast_vote(election_id):
             raise
 
     return APIResponse.success(message='Votes cast', data={'results': results}, status_code=200)
+
+
+@app.route('/api/v1/elections/<int:election_id>/audit-auth', methods=['POST'], strict_slashes=False)
+def audit_auth(election_id):
+    """Authenticate voter for audit page viewing using face recognition.
+    
+    Returns a short-lived JWT with 'audit_auth' claim that can be used to access the audit endpoint.
+    """
+    election = Election.query.get(election_id)
+    if not election:
+        raise ValidationError(message='Election not found')
+
+    reg_no = (request.form.get('registration_number') or '').strip()
+    if not reg_no:
+        raise ValidationError(message='registration_number is required', status_code=400)
+
+    if 'image' not in request.files or not request.files['image'] or request.files['image'].filename == '':
+        raise ValidationError(message='Image is required', status_code=400)
+
+    voter = db.session.query(Voter).join(InstitutionalRecord, Voter.student_record_id == InstitutionalRecord.id).filter(
+        InstitutionalRecord.registration_number == reg_no,
+        Voter.election_id == election_id
+    ).first()
+    if not voter:
+        raise ValidationError(message='No registered voter found for this registration number', status_code=400)
+
+    if not voter.image_url:
+        raise ValidationError(message='No reference image available for this voter.', status_code=400)
+
+    file = request.files.get('image')
+    if not file or not allowed_file(file.filename):
+        raise ValidationError(message='Validation failed', errors={'image': 'Invalid image file'}, status_code=400)
+
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[1].lower()
+    temp_name = f"audit_live_{uuid.uuid4().hex}.{ext}"
+    images_dir = os.path.join(app.root_path, 'static', 'images')
+    os.makedirs(images_dir, exist_ok=True)
+    temp_path = os.path.join(images_dir, temp_name)
+    file.save(temp_path)
+
+    try:
+        known_filename = os.path.basename(voter.image_url)
+        known_path = os.path.join(app.root_path, 'static', 'images', known_filename)
+
+        try:
+            result = DeepFace.verify(
+                img1_path=known_path,
+                img2_path=temp_path,
+                model_name='ArcFace',
+                detector_backend='retinaface',
+                distance_metric='cosine',
+                enforce_detection=False
+            )
+        except ValueError as ve:
+            logging.error("Face detection error", exc_info=True)
+            raise ValidationError(message='Face could not be detected in the image', status_code=400)
+        except Exception as e:
+            raise ValidationError(message=f'Face verification failed: {str(e)}', status_code=500)
+
+        is_match = bool(result.get('verified', False))
+        distance = result.get('distance')
+        threshold = result.get('threshold')
+
+        if not is_match:
+            raise ValidationError(message='Face did not match', errors={"error": "Can not authenticate! Face did not match"}, status_code=401)
+
+        # Create audit token (10 minutes validity)
+        token = create_access_token(
+            identity=f"voter:{voter.id}",
+            additional_claims={'audit_auth': True, 'election_id': election_id, 'voter_id': voter.id},
+            expires_delta=timedelta(minutes=10)
+        )
+
+        return APIResponse.success(message='Voter authenticated for audit', data={'token': token}, status_code=200)
+    finally:
+        try:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+        except Exception:
+            app.logger.exception('Failed to remove temporary audit image')
+
+
+@app.route('/api/v1/elections/<int:election_id>/audit', methods=['GET'], strict_slashes=False)
+@jwt_required()
+def get_audit(election_id):
+    """Get audit information for the authenticated voter.
+    
+    Returns the list of candidates the voter voted for, along with transaction hashes.
+    Requires a JWT with 'audit_auth' claim from the audit-auth endpoint.
+    """
+    claims = get_jwt()
+    if not claims.get('audit_auth'):
+        raise ValidationError(message='Unauthorized to view audit', status_code=401)
+
+    token_eid = claims.get('election_id')
+    voter_id = claims.get('voter_id')
+    if token_eid is None or int(token_eid) != int(election_id):
+        raise ValidationError(message='Token election mismatch', status_code=401)
+
+    if voter_id is None:
+        raise ValidationError(message='Invalid audit token', status_code=401)
+
+    voter = Voter.query.get(int(voter_id))
+    if not voter:
+        raise NotFoundError(message='Voter not found')
+
+    election = Election.query.get(election_id)
+    if not election:
+        raise NotFoundError(message='Election not found')
+
+    # Get all vote records for this voter in this election
+    votes = Vote.query.filter_by(
+        election_id=election_id,
+        voter_id=voter.id,
+        action='vote'
+    ).order_by(Vote.created_at.asc()).all()
+
+    if not votes:
+        return APIResponse.success(message='No votes found', data={'votes': [], 'voter': voter.to_dict()}, status_code=200)
+
+    # Build response with candidate details and transaction info
+    vote_details = []
+    for vote in votes:
+        candidate = Candidate.query.get(vote.candidate_id) if vote.candidate_id else None
+        post = Post.query.get(candidate.post_id) if candidate else None
+        
+        vote_detail = {
+            'id': vote.id,
+            'tx_hash': vote.tx_hash,
+            'status': vote.status,
+            'block_number': vote.block_number,
+            'created_at': vote.created_at.isoformat() if vote.created_at else None,
+            'candidate': candidate.to_dict() if candidate else None,
+            'position': post.to_dict() if post else None
+        }
+        vote_details.append(vote_detail)
+
+    return APIResponse.success(
+        message='Audit data retrieved',
+        data={
+            'votes': vote_details,
+            'voter': voter.to_dict(),
+            'election': election.to_dict()
+        },
+        status_code=200
+    )

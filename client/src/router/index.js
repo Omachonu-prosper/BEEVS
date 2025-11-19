@@ -8,6 +8,8 @@ import ElectionView from '@/views/ElectionView.vue'
 import VotingView from '@/views/VotingView.vue'
 import VoteAuthView from '@/views/VoteAuthView.vue'
 import ResultsView from '@/views/ResultsView.vue'
+import AuditAuthView from '@/views/AuditAuthView.vue'
+import AuditView from '@/views/AuditView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -43,6 +45,14 @@ const router = createRouter({
     {
       path: '/results/:electionId',
       component: ResultsView
+    },
+    {
+      path: '/audit/:electionId/auth',
+      component: AuditAuthView
+    },
+    {
+      path: '/audit/:electionId',
+      component: AuditView
     }
   ],
 })
