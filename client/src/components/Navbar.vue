@@ -21,7 +21,7 @@ const logoutHandler = () => {
         <div class="flex items-center">
           <div class="mr-6">
             <p class="text-md text-neutral-700">logged in as omachonucodes@gmail.com</p>
-            <p class="text-sm text-neutral-500 text-right">super admin</p>
+            <p class="text-sm text-neutral-500 text-right">system admin</p>
           </div>
           <button class="p-2 rounded-full text-blue-600 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600">
             <span class="sr-only">Logout</span>
